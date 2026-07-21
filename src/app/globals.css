@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background: #ffffff;
+  --surface: #f4f6f9;
+  --surface-hover: #eaedf3;
+  --border: #dde2ea;
+  --foreground: #171a1f;
+  --muted: #5b6472;
+  --primary: #0f2a4a;
+  --primary-hover: #163a63;
+  --accent: #2f6fed;
+  --danger: #c0392b;
+}
+
+.dark {
+  --background: #0b1220;
+  --surface: #121b2e;
+  --surface-hover: #182338;
+  --border: #232f45;
+  --foreground: #e7e9ee;
+  --muted: #97a1b3;
+  --primary: #e7e9ee;
+  --primary-hover: #ffffff;
+  --accent: #5b8def;
+  --danger: #e0685a;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-hover: var(--surface-hover);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-accent: var(--accent);
+  --color-danger: var(--danger);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}

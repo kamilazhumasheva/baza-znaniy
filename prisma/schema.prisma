@@ -1,0 +1,213 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  url        = env("DATABASE_URL")
+  extensions = [pg_trgm]
+}
+
+// ---------- Enums ----------
+
+enum Role {
+  ADMIN
+  EMPLOYEE
+}
+
+enum ContentStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum FileType {
+  DOCX
+  PDF
+  XLSX
+}
+
+enum FavoriteTargetType {
+  MATERIAL
+  FAQ
+}
+
+enum ChangeAction {
+  CREATE
+  UPDATE
+  DELETE
+  PUBLISH
+  UPLOAD_VERSION
+}
+
+// ---------- Core ----------
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(EMPLOYEE)
+  isBlocked    Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  documents     Document[]     @relation("UploadedBy")
+  materials     Material[]     @relation("AuthoredBy")
+  favorites     Favorite[]
+  viewHistory   ViewHistory[]
+  searchLogs    SearchLog[]
+  notifications Notification[]
+  changeLogs    ChangeLog[]
+}
+
+model Category {
+  id       String     @id @default(cuid())
+  name     String
+  slug     String     @unique
+  order    Int        @default(0)
+  parentId String?
+  parent   Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Category[] @relation("CategoryTree")
+
+  documents Document[]
+  materials Material[]
+  faqs      Faq[]
+
+  @@index([parentId])
+}
+
+model Document {
+  id                String        @id @default(cuid())
+  title             String
+  categoryId        String
+  category          Category      @relation(fields: [categoryId], references: [id])
+  filePath          String
+  fileType          FileType
+  version           Int           @default(1)
+  previousVersionId String?       @unique
+  previousVersion   Document?     @relation("DocumentVersions", fields: [previousVersionId], references: [id])
+  nextVersion       Document?     @relation("DocumentVersions")
+  status            ContentStatus @default(DRAFT)
+  uploadedById      String
+  uploadedBy        User          @relation("UploadedBy", fields: [uploadedById], references: [id])
+  createdAt         DateTime      @default(now())
+
+  materials  Material[]
+  faqs       Faq[]
+  changeLogs ChangeLog[]
+
+  @@index([categoryId])
+}
+
+model Material {
+  id           String        @id @default(cuid())
+  title        String
+  description  String
+  categoryId   String
+  category     Category      @relation(fields: [categoryId], references: [id])
+  documentId   String?
+  document     Document?     @relation(fields: [documentId], references: [id])
+  authorId     String
+  author       User          @relation("AuthoredBy", fields: [authorId], references: [id])
+  status       ContentStatus @default(DRAFT)
+  pinned       Boolean       @default(false)
+  isNews       Boolean       @default(false)
+  publishedAt  DateTime?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+
+  faqs        Faq[]
+  favorites   Favorite[]
+  viewHistory ViewHistory[]
+
+  @@index([categoryId, status])
+  @@index([pinned])
+}
+
+model Faq {
+  id               String        @id @default(cuid())
+  question         String
+  answer           String
+  categoryId       String
+  category         Category      @relation(fields: [categoryId], references: [id])
+  sourceDocumentId String?
+  sourceDocument   Document?     @relation(fields: [sourceDocumentId], references: [id])
+  materialId       String?
+  material         Material?     @relation(fields: [materialId], references: [id])
+  status           ContentStatus @default(DRAFT)
+  updatedAt        DateTime      @updatedAt
+  createdAt        DateTime      @default(now())
+
+  favorites   Favorite[]
+  viewHistory ViewHistory[]
+
+  @@index([categoryId, status])
+}
+
+model Favorite {
+  id         String             @id @default(cuid())
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType FavoriteTargetType
+  materialId String?
+  material   Material?          @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  faqId      String?
+  faq        Faq?               @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  createdAt  DateTime           @default(now())
+
+  @@unique([userId, materialId])
+  @@unique([userId, faqId])
+}
+
+model ViewHistory {
+  id         String             @id @default(cuid())
+  userId     String
+  user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  targetType FavoriteTargetType
+  materialId String?
+  material   Material?          @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  faqId      String?
+  faq        Faq?               @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  viewedAt   DateTime           @default(now())
+
+  @@index([userId, viewedAt])
+}
+
+model SearchLog {
+  id           String   @id @default(cuid())
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  query        String
+  resultsCount Int
+  createdAt    DateTime @default(now())
+
+  @@index([query])
+  @@index([createdAt])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  message   String
+  link      String?
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([userId, isRead])
+}
+
+model ChangeLog {
+  id         String       @id @default(cuid())
+  entityType String
+  entityId   String
+  documentId String?
+  document   Document?    @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  userId     String
+  user       User         @relation(fields: [userId], references: [id])
+  action     ChangeAction
+  details    String?
+  createdAt  DateTime     @default(now())
+
+  @@index([entityType, entityId])
+}
