@@ -51,7 +51,7 @@ npm run dev
 ```
 
 `npm run db:setup` выполняет по очереди:
-1. `prisma migrate dev` — создаёт таблицы по `prisma/schema.prisma`. Миграций в репозитории ещё нет (в среде разработки не было доступа к Postgres), поэтому при первом запуске Prisma спросит имя миграции в интерактивном терминале — введите, например, `init`;
+1. `prisma migrate dev` — применяет миграцию `prisma/migrations/20260721105801_init` (создана и проверена локально на PostgreSQL 15);
 2. `prisma db execute --file prisma/sql/search-indexes.sql` — включает `pg_trgm` и создаёт GIN/триграммные индексы (не описываются Prisma-схемой, поэтому применяются отдельным шагом);
 3. `prisma db seed` (`prisma/seed.ts`) — создаёт категории из ТЗ и тестовых пользователей.
 
