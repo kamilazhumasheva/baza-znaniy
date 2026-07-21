@@ -6,6 +6,7 @@ import { materialUpdateSchema } from "@/lib/validation";
 import { handleApiError, jsonError } from "@/lib/api";
 import { logChange } from "@/lib/changelog";
 import { notifyEmployees } from "@/lib/notify";
+import { setMaterialEmbedding } from "@/lib/pipeline/embedContent";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -66,6 +67,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
     if (becomesPublished) {
       await notifyEmployees(`Новый материал: ${material.title}`, `/materials/${material.id}`);
+    }
+
+    if (body.title !== undefined || body.description !== undefined) {
+      await setMaterialEmbedding(material.id, `${material.title}\n${material.description}`);
     }
 
     return NextResponse.json(material);

@@ -6,6 +6,7 @@ import { materialSchema } from "@/lib/validation";
 import { handleApiError } from "@/lib/api";
 import { logChange } from "@/lib/changelog";
 import { notifyEmployees } from "@/lib/notify";
+import { setMaterialEmbedding } from "@/lib/pipeline/embedContent";
 import type { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
@@ -60,6 +61,8 @@ export async function POST(req: NextRequest) {
     if (material.status === "PUBLISHED") {
       await notifyEmployees(`Новый материал: ${material.title}`, `/materials/${material.id}`);
     }
+
+    await setMaterialEmbedding(material.id, `${material.title}\n${material.description}`);
 
     return NextResponse.json(material, { status: 201 });
   } catch (error) {

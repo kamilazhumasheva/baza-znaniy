@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/rbac";
 import { faqUpdateSchema } from "@/lib/validation";
 import { handleApiError, jsonError } from "@/lib/api";
 import { logChange } from "@/lib/changelog";
+import { setFaqEmbedding } from "@/lib/pipeline/embedContent";
 
 type Params = { params: Promise<{ id: string }> };
 
@@ -46,6 +47,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       userId: guard.session.user.id,
       action: becomesPublished ? "PUBLISH" : "UPDATE",
     });
+
+    if (body.question !== undefined || body.answer !== undefined) {
+      await setFaqEmbedding(faq.id, `${faq.question}\n${faq.answer}`);
+    }
 
     return NextResponse.json(faq);
   } catch (error) {

@@ -1,5 +1,6 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { getEmbeddingProvider, toVectorLiteral } from "@/lib/embeddings";
 
 export interface SearchResult {
   type: "MATERIAL" | "FAQ";
@@ -14,11 +15,11 @@ export interface SearchResult {
 }
 
 /**
- * Гибридный поиск: полнотекстовый (websearch_to_tsquery, rus-конфигурация)
- * + триграммное сходство (pg_trgm) как страховка от опечаток и неточных формулировок.
- * Результат ранжируется комбинированным скором ts_rank*2 + similarity.
+ * Полнотекстовый поиск: websearch_to_tsquery (rus-конфигурация) + триграммное
+ * сходство (pg_trgm) как страховка от опечаток и неточных формулировок.
+ * Работает всегда, независимо от того, настроен ли семантический поиск.
  */
-export async function searchContent(params: {
+async function textSearch(params: {
   query: string;
   categoryId?: string;
   limit?: number;
@@ -88,6 +89,143 @@ export async function searchContent(params: {
   `);
 
   return results;
+}
+
+export interface SemanticHit {
+  type: "MATERIAL" | "FAQ";
+  id: string;
+  title: string;
+  snippet: string;
+  categoryId: string;
+  categoryName: string;
+  categorySlug: string;
+  score: number;
+}
+
+/**
+ * Семантический поиск по косинусному расстоянию (pgvector). Возвращает []
+ * если провайдер эмбеддингов не настроен (EMBEDDINGS_API_KEY) или колонка
+ * embedding ещё не создана (npm run db:semantic-search-setup не выполнялся) —
+ * в этом случае searchContent() ведёт себя как чистый full-text/trgm поиск.
+ */
+async function semanticSearch(
+  query: string,
+  categoryId?: string,
+  limit = 20,
+): Promise<SemanticHit[]> {
+  const provider = getEmbeddingProvider();
+  if (!provider) return [];
+
+  let literal: string;
+  try {
+    literal = toVectorLiteral(await provider.embed(query));
+  } catch (error) {
+    console.error("Семантический поиск: не удалось получить эмбеддинг запроса", error);
+    return [];
+  }
+
+  const materialCategoryFilter = categoryId
+    ? Prisma.sql`AND m."categoryId" = ${categoryId}`
+    : Prisma.empty;
+  const faqCategoryFilter = categoryId
+    ? Prisma.sql`AND f."categoryId" = ${categoryId}`
+    : Prisma.empty;
+
+  try {
+    return await prisma.$queryRaw<SemanticHit[]>(Prisma.sql`
+      SELECT * FROM (
+        SELECT
+          'MATERIAL' AS type, m.id AS id, m.title AS title,
+          left(m.description, 240) AS snippet,
+          m."categoryId" AS "categoryId", c.name AS "categoryName", c.slug AS "categorySlug",
+          1 - (m.embedding <=> ${literal}::vector) AS score
+        FROM "Material" m
+        JOIN "Category" c ON c.id = m."categoryId"
+        WHERE m.status = 'PUBLISHED' AND m.embedding IS NOT NULL ${materialCategoryFilter}
+
+        UNION ALL
+
+        SELECT
+          'FAQ' AS type, f.id AS id, f.question AS title,
+          left(f.answer, 240) AS snippet,
+          f."categoryId" AS "categoryId", c.name AS "categoryName", c.slug AS "categorySlug",
+          1 - (f.embedding <=> ${literal}::vector) AS score
+        FROM "Faq" f
+        JOIN "Category" c ON c.id = f."categoryId"
+        WHERE f.status = 'PUBLISHED' AND f.embedding IS NOT NULL ${faqCategoryFilter}
+      ) semantic
+      ORDER BY score DESC
+      LIMIT ${limit}
+    `);
+  } catch (error) {
+    console.error(
+      "Семантический поиск недоступен (вероятно, не выполнен prisma/sql/semantic-search.sql):",
+      error,
+    );
+    return [];
+  }
+}
+
+/**
+ * Объединяет результаты полнотекстового и семантического поиска: элементы,
+ * найденные обоими способами, получают бонус к рангу; уникальные семантические
+ * совпадения (близкие по смыслу, но без общих слов) добавляются отдельно.
+ * Чистая функция — не обращается к БД, поэтому легко тестируется без Postgres.
+ */
+export function mergeSearchResults(
+  textResults: SearchResult[],
+  semanticResults: SemanticHit[],
+  limit: number,
+): SearchResult[] {
+  const merged = new Map<string, SearchResult>();
+
+  for (const r of textResults) {
+    merged.set(`${r.type}:${r.id}`, { ...r });
+  }
+
+  for (const s of semanticResults) {
+    const key = `${s.type}:${s.id}`;
+    const existing = merged.get(key);
+    if (existing) {
+      existing.rank += s.score;
+    } else {
+      merged.set(key, {
+        type: s.type,
+        id: s.id,
+        title: s.title,
+        snippet: s.snippet,
+        categoryId: s.categoryId,
+        categoryName: s.categoryName,
+        categorySlug: s.categorySlug,
+        rank: s.score,
+        sim: 0,
+      });
+    }
+  }
+
+  return [...merged.values()]
+    .sort((a, b) => b.rank * 2 + b.sim - (a.rank * 2 + a.sim))
+    .slice(0, limit);
+}
+
+/**
+ * Гибридный поиск: full-text/trgm + (если настроен) семантический слой.
+ * Без EMBEDDINGS_API_KEY ведёт себя идентично прежнему textSearch().
+ */
+export async function searchContent(params: {
+  query: string;
+  categoryId?: string;
+  limit?: number;
+}): Promise<SearchResult[]> {
+  const { query, categoryId, limit = 20 } = params;
+  if (!query.trim()) return [];
+
+  const [text, semantic] = await Promise.all([
+    textSearch({ query, categoryId, limit }),
+    semanticSearch(query, categoryId, limit),
+  ]);
+
+  return mergeSearchResults(text, semantic, limit);
 }
 
 export async function performSearch(params: {

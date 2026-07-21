@@ -10,6 +10,7 @@
     "test": "vitest run",
     "db:migrate": "prisma migrate dev",
     "db:search-indexes": "prisma db execute --file prisma/sql/search-indexes.sql --schema prisma/schema.prisma",
+    "db:semantic-search-setup": "prisma db execute --file prisma/sql/semantic-search.sql --schema prisma/schema.prisma",
     "db:seed": "prisma db seed",
     "db:setup": "npm run db:migrate && npm run db:search-indexes && npm run db:seed"
   },

@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import type { ParsedDocument } from "@/lib/parsing";
+import { setFaqEmbedding, setMaterialEmbedding } from "@/lib/pipeline/embedContent";
 
 export interface QAPair {
   question: string;
@@ -62,17 +63,21 @@ export async function generateDraftsFromDocument(params: {
 }) {
   const { documentId, categoryId, authorId, parsed } = params;
 
-  return prisma.$transaction(async (tx) => {
+  const newMaterials: { id: string; text: string }[] = [];
+  const newFaqs: { id: string; text: string }[] = [];
+
+  const { materialsCount, faqsCount } = await prisma.$transaction(async (tx) => {
     let materialsCount = 0;
     let faqsCount = 0;
 
     for (const section of parsed.sections) {
       if (!section.content.trim()) continue;
 
+      const description = truncate(section.content, 500);
       const material = await tx.material.create({
         data: {
           title: truncate(section.heading || "Без названия", 300),
-          description: truncate(section.content, 500),
+          description,
           categoryId,
           documentId,
           authorId,
@@ -80,13 +85,15 @@ export async function generateDraftsFromDocument(params: {
         },
       });
       materialsCount++;
+      newMaterials.push({ id: material.id, text: `${material.title}\n${description}` });
 
       const qaPairs = extractQAFromText(section.heading, section.content);
       for (const qa of qaPairs) {
-        await tx.faq.create({
+        const answer = qa.answer.trim();
+        const faq = await tx.faq.create({
           data: {
             question: truncate(qa.question, 500),
-            answer: qa.answer.trim(),
+            answer,
             categoryId,
             sourceDocumentId: documentId,
             materialId: material.id,
@@ -94,9 +101,19 @@ export async function generateDraftsFromDocument(params: {
           },
         });
         faqsCount++;
+        newFaqs.push({ id: faq.id, text: `${faq.question}\n${answer}` });
       }
     }
 
     return { materialsCount, faqsCount };
   });
+
+  // Эмбеддинги считаются вне транзакции (сетевой вызов), чтобы не держать её открытой.
+  // Если EMBEDDINGS_API_KEY не задан — эти вызовы мгновенно возвращаются, ничего не делая.
+  await Promise.allSettled([
+    ...newMaterials.map((m) => setMaterialEmbedding(m.id, m.text)),
+    ...newFaqs.map((f) => setFaqEmbedding(f.id, f.text)),
+  ]);
+
+  return { materialsCount, faqsCount };
 }

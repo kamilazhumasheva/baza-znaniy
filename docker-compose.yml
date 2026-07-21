@@ -1,6 +1,9 @@
 services:
   db:
-    image: postgres:16-alpine
+    # pgvector/pgvector — образ на базе официального postgres с предустановленным
+    # расширением vector (не включено, пока не понадобится семантический поиск —
+    # см. README «Семантический поиск»). Полностью совместим с обычным postgres:16.
+    image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
       POSTGRES_USER: kb_user

@@ -5,6 +5,7 @@ import { requireAdmin } from "@/lib/rbac";
 import { faqSchema } from "@/lib/validation";
 import { handleApiError } from "@/lib/api";
 import { logChange } from "@/lib/changelog";
+import { setFaqEmbedding } from "@/lib/pipeline/embedContent";
 import type { Prisma } from "@prisma/client";
 
 export async function GET(req: NextRequest) {
@@ -46,6 +47,7 @@ export async function POST(req: NextRequest) {
       userId: guard.session.user.id,
       action: "CREATE",
     });
+    await setFaqEmbedding(faq.id, `${faq.question}\n${faq.answer}`);
     return NextResponse.json(faq, { status: 201 });
   } catch (error) {
     return handleApiError(error);
