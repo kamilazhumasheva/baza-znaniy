@@ -21,9 +21,11 @@ COPY --from=build /app/public ./public
 COPY --from=build /app/prisma ./prisma
 COPY --from=build /app/package.json ./package.json
 COPY --from=build /app/next.config.ts ./next.config.ts
+COPY docker-entrypoint.sh ./docker-entrypoint.sh
+RUN chmod +x ./docker-entrypoint.sh
 
 RUN mkdir -p /app/storage/uploads
 VOLUME ["/app/storage/uploads"]
 
 EXPOSE 3000
-CMD ["npm", "start"]
+ENTRYPOINT ["./docker-entrypoint.sh"]
