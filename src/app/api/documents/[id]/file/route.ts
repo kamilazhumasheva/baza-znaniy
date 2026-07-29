@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { requireAuth } from "@/lib/rbac";
+import { requireAdmin } from "@/lib/rbac";
 import { jsonError } from "@/lib/api";
 import { storage } from "@/lib/storage";
 
@@ -12,21 +12,15 @@ const CONTENT_TYPES: Record<string, string> = {
   XLSX: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
 };
 
+// Скачивание оригинального файла документа доступно только администратору.
+// Сотрудники видят содержимое материала на странице, но не файл-первоисточник.
 export async function GET(_req: NextRequest, { params }: Params) {
-  const guard = await requireAuth();
+  const guard = await requireAdmin();
   if (guard.error) return guard.error;
   const { id } = await params;
 
   const document = await prisma.document.findUnique({ where: { id } });
   if (!document) return jsonError("Документ не найден", 404);
-
-  const isAdmin = guard.session.user.role === "ADMIN";
-  if (!isAdmin) {
-    const hasPublishedMaterial = await prisma.material.findFirst({
-      where: { documentId: id, status: "PUBLISHED" },
-    });
-    if (!hasPublishedMaterial) return jsonError("Документ не найден", 404);
-  }
 
   const buffer = await storage.read(document.filePath);
 

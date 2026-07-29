@@ -61,7 +61,7 @@ export default async function MaterialPage({
 
       <p className="whitespace-pre-line text-foreground">{material.description}</p>
 
-      {material.document && (
+      {material.document && isAdmin && (
         <a
           href={`/api/documents/${material.document.id}/file`}
           className="flex w-fit items-center gap-2 rounded-md bg-primary px-4 py-2 text-sm font-medium text-background transition-opacity hover:opacity-90"
