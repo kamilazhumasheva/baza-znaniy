@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { NotificationsBell } from "@/components/notifications-bell";
+import { CorporateLogoBadge } from "@/components/corporate-logo-badge";
 
 export async function SiteHeader() {
   const session = await auth();
@@ -42,13 +43,14 @@ export async function SiteHeader() {
           )}
         </nav>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           {session?.user && <NotificationsBell initialUnreadCount={unreadCount} />}
           <ThemeToggle />
           <HeaderAuthControls
             userName={session?.user?.name ?? null}
             userRole={session?.user?.role ?? null}
           />
+          <CorporateLogoBadge />
         </div>
       </div>
     </header>
