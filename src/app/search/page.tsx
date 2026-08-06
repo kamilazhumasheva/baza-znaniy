@@ -40,7 +40,7 @@ async function SearchResults({
             </span>
           </div>
           <h3 className="font-semibold text-foreground">{r.title}</h3>
-          <p className="line-clamp-2 text-sm text-muted">{r.snippet}</p>
+          <p className="whitespace-pre-line text-sm text-muted">{r.snippet}</p>
         </Link>
       ))}
     </div>

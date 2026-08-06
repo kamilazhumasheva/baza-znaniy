@@ -1,6 +1,11 @@
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { getEmbeddingProvider, toVectorLiteral } from "@/lib/embeddings";
+import { buildSnippet } from "@/lib/snippet";
+
+// Из БД забираем текст с запасом: конкретную выдержку (строки со словом
+// из запроса) формирует buildSnippet уже в приложении.
+const SNIPPET_SOURCE_LIMIT = 4000;
 
 export interface SearchResult {
   type: "MATERIAL" | "FAQ";
@@ -40,7 +45,7 @@ async function textSearch(params: {
         'MATERIAL' AS type,
         m.id AS id,
         m.title AS title,
-        left(m.description, 240) AS snippet,
+        left(m.description, ${SNIPPET_SOURCE_LIMIT}::int) AS snippet,
         m."categoryId" AS "categoryId",
         c.name AS "categoryName",
         c.slug AS "categorySlug",
@@ -65,7 +70,7 @@ async function textSearch(params: {
         'FAQ' AS type,
         f.id AS id,
         f.question AS title,
-        left(f.answer, 240) AS snippet,
+        left(f.answer, ${SNIPPET_SOURCE_LIMIT}::int) AS snippet,
         f."categoryId" AS "categoryId",
         c.name AS "categoryName",
         c.slug AS "categorySlug",
@@ -136,7 +141,7 @@ async function semanticSearch(
       SELECT * FROM (
         SELECT
           'MATERIAL' AS type, m.id AS id, m.title AS title,
-          left(m.description, 240) AS snippet,
+          left(m.description, ${SNIPPET_SOURCE_LIMIT}::int) AS snippet,
           m."categoryId" AS "categoryId", c.name AS "categoryName", c.slug AS "categorySlug",
           1 - (m.embedding <=> ${literal}::vector) AS score
         FROM "Material" m
@@ -147,7 +152,7 @@ async function semanticSearch(
 
         SELECT
           'FAQ' AS type, f.id AS id, f.question AS title,
-          left(f.answer, 240) AS snippet,
+          left(f.answer, ${SNIPPET_SOURCE_LIMIT}::int) AS snippet,
           f."categoryId" AS "categoryId", c.name AS "categoryName", c.slug AS "categorySlug",
           1 - (f.embedding <=> ${literal}::vector) AS score
         FROM "Faq" f
@@ -225,7 +230,10 @@ export async function searchContent(params: {
     semanticSearch(query, categoryId, limit),
   ]);
 
-  return mergeSearchResults(text, semantic, limit);
+  return mergeSearchResults(text, semantic, limit).map((result) => ({
+    ...result,
+    snippet: buildSnippet(result.snippet, query),
+  }));
 }
 
 export async function performSearch(params: {
