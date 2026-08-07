@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Faq } from "@prisma/client";
 import { apiRequest } from "@/lib/client-api";
 import { StatusBadge } from "@/components/admin/status-badge";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export function FaqRow({ faq, onChange, onDelete }: { faq: Faq; onChange: (f: Faq) => void; onDelete: (id: string) => void }) {
   const [editing, setEditing] = useState(false);
@@ -38,9 +39,13 @@ export function FaqRow({ faq, onChange, onDelete }: { faq: Faq; onChange: (f: Fa
   }
 
   async function remove() {
-    if (!confirm("Удалить вопрос?")) return;
-    await apiRequest(`/api/faq/${faq.id}`, { method: "DELETE" });
-    onDelete(faq.id);
+    setError(null);
+    try {
+      await apiRequest(`/api/faq/${faq.id}`, { method: "DELETE" });
+      onDelete(faq.id);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Ошибка");
+    }
   }
 
   if (editing) {
@@ -91,10 +96,9 @@ export function FaqRow({ faq, onChange, onDelete }: { faq: Faq; onChange: (f: Fa
         <button onClick={togglePublish} className="text-sm text-accent hover:underline">
           {faq.status === "PUBLISHED" ? "Снять с публикации" : "Опубликовать"}
         </button>
-        <button onClick={remove} className="text-sm text-danger hover:underline">
-          Удалить
-        </button>
+        <ConfirmButton label="Удалить" onConfirm={remove} />
       </div>
+      {error && <p className="text-sm text-danger">{error}</p>}
     </div>
   );
 }

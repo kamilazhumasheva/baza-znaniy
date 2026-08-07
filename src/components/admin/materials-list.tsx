@@ -7,6 +7,7 @@ import type { Category, Material } from "@prisma/client";
 import { apiRequest } from "@/lib/client-api";
 import { StatusBadge } from "@/components/admin/status-badge";
 import { CreateMaterialForm } from "@/components/admin/create-material-form";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 type MaterialWithCategory = Material & { category: Category };
 
@@ -36,10 +37,11 @@ export function AdminMaterialsList({
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Удалить материал?")) return;
+    setError(null);
     try {
       await apiRequest(`/api/materials/${id}`, { method: "DELETE" });
       setMaterials((prev) => prev.filter((m) => m.id !== id));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     }
@@ -105,9 +107,7 @@ export function AdminMaterialsList({
                     <button onClick={() => togglePublish(m)} className="text-sm text-accent hover:underline">
                       {m.status === "PUBLISHED" ? "Снять с публикации" : "Опубликовать"}
                     </button>
-                    <button onClick={() => handleDelete(m.id)} className="text-sm text-danger hover:underline">
-                      Удалить
-                    </button>
+                    <ConfirmButton label="Удалить" onConfirm={() => handleDelete(m.id)} />
                   </div>
                 </td>
               </tr>

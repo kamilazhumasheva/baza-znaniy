@@ -4,6 +4,7 @@ import { useState } from "react";
 import type { Category } from "@prisma/client";
 import { apiRequest } from "@/lib/client-api";
 import { slugify } from "@/lib/slug";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 export function CategoryManager({ initialCategories }: { initialCategories: Category[] }) {
   const [categories, setCategories] = useState(initialCategories);
@@ -38,7 +39,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Удалить категорию?")) return;
+    setError(null);
     try {
       await apiRequest(`/api/categories/${id}`, { method: "DELETE" });
       setCategories((prev) => prev.filter((c) => c.id !== id));
@@ -113,12 +114,7 @@ export function CategoryManager({ initialCategories }: { initialCategories: Cate
                   {categories.find((p) => p.id === c.parentId)?.name ?? "—"}
                 </td>
                 <td className="px-4 py-2 text-right">
-                  <button
-                    onClick={() => handleDelete(c.id)}
-                    className="text-sm text-danger hover:underline"
-                  >
-                    Удалить
-                  </button>
+                  <ConfirmButton label="Удалить" onConfirm={() => handleDelete(c.id)} />
                 </td>
               </tr>
             ))}

@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Category, Document } from "@prisma/client";
+import { ConfirmButton } from "@/components/admin/confirm-button";
 
 type DocumentWithRelations = Document & {
   category: Category;
@@ -23,6 +25,7 @@ export function DocumentsManager({
   initialDocuments: DocumentWithRelations[];
   categories: Category[];
 }) {
+  const router = useRouter();
   const [documents, setDocuments] = useState(initialDocuments);
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
@@ -53,6 +56,9 @@ export function DocumentsManager({
       );
       setTitle("");
       setFile(null);
+      // Сбрасываем кэш роутера, иначе на страницах «Материалы» и «Вопросы (FAQ)»
+      // может показаться сохранённая копия списка без новых черновиков.
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     } finally {
@@ -73,13 +79,14 @@ export function DocumentsManager({
       setMessage(
         `Новая версия загружена. Создано черновиков: ${result.materialsCount} материалов, ${result.faqsCount} вопросов.`,
       );
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     }
   }
 
   async function handleDelete(id: string) {
-    if (!confirm("Удалить документ?")) return;
+    setError(null);
     try {
       const res = await fetch(`/api/documents/${id}`, { method: "DELETE" });
       if (!res.ok) {
@@ -87,6 +94,7 @@ export function DocumentsManager({
         throw new Error(data.error ?? "Не удалось удалить документ");
       }
       setDocuments((prev) => prev.filter((d) => d.id !== id));
+      router.refresh();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Ошибка");
     }
@@ -177,9 +185,7 @@ export function DocumentsManager({
                         }}
                       />
                     </label>
-                    <button onClick={() => handleDelete(d.id)} className="text-sm text-danger hover:underline">
-                      Удалить
-                    </button>
+                    <ConfirmButton label="Удалить" onConfirm={() => handleDelete(d.id)} />
                   </div>
                 </td>
               </tr>
