@@ -46,8 +46,19 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (guard.error) return guard.error;
   const { id } = await params;
 
-  const previous = await prisma.document.findUnique({ where: { id } });
-  if (!previous) return jsonError("Документ не найден", 404);
+  const requested = await prisma.document.findUnique({ where: { id } });
+  if (!requested) return jsonError("Документ не найден", 404);
+
+  // Новая версия всегда цепляется к concу цепочки: previousVersionId уникален,
+  // и попытка прицепить вторую версию к тому же документу падала с ошибкой БД.
+  let previous: Document = requested;
+  while (true) {
+    const next: Document | null = await prisma.document.findUnique({
+      where: { previousVersionId: previous.id },
+    });
+    if (!next) break;
+    previous = next;
+  }
 
   try {
     const form = await req.formData();

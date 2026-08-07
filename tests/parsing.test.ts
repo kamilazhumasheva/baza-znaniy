@@ -137,6 +137,13 @@ describe("sectionsFromRows (xlsx)", () => {
 });
 
 describe("findQuizColumns", () => {
+  it("не падает на «дырках» в строке заголовка (пустые ячейки Excel)", () => {
+    const sparseHeader = ["№", , "Текст вопроса", "Ответ 1 (Верный)"] as string[];
+
+    expect(() => findQuizColumns(sparseHeader)).not.toThrow();
+    expect(findQuizColumns(sparseHeader)).toEqual({ questionIndex: 2, answerIndex: 3 });
+  });
+
   it("предпочитает колонку, помеченную как верный ответ", () => {
     expect(findQuizColumns(["Текст вопроса", "Ответ 2", "Ответ 1 (Верный)"])).toEqual({
       questionIndex: 0,

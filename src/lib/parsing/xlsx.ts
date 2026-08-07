@@ -47,7 +47,9 @@ export function cellToString(value: unknown): string {
 export function findQuizColumns(
   header: string[],
 ): { questionIndex: number; answerIndex: number } | null {
-  const lower = header.map((h) => h.toLowerCase());
+  // Array.from, а не map: map пропускает «дырки» разреженного массива и оставляет
+  // их в результате, из-за чего findIndex ниже получил бы undefined.
+  const lower = Array.from(header, (h) => (h ?? "").toLowerCase());
 
   const questionIndex = lower.findIndex((h) => h.includes("вопрос"));
   if (questionIndex === -1) return null;
@@ -97,7 +99,11 @@ export async function parseXlsx(buffer: Buffer): Promise<ParsedDocument> {
   workbook.eachSheet((sheet) => {
     const rows: string[][] = [];
     sheet.eachRow((row) => {
-      const values = (row.values as ExcelJS.CellValue[]).slice(1).map(cellToString);
+      // row.values — разреженный массив: нулевой индекс не используется, а пустые
+      // ячейки остаются «дырками». Array.from превращает дырки в пустые строки,
+      // иначе методы вроде findIndex получают undefined и падают.
+      const raw = (row.values ?? []) as ExcelJS.CellValue[];
+      const values = Array.from(raw, cellToString).slice(1);
       if (values.some(Boolean)) rows.push(values);
     });
 
