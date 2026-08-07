@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { sectionsFromHtml } from "@/lib/parsing/docx";
 import { sectionsFromText } from "@/lib/parsing/pdf";
-import { sectionsFromRows } from "@/lib/parsing/xlsx";
+import { cellToString, findQuizColumns, sectionsFromRows } from "@/lib/parsing/xlsx";
 
 describe("sectionsFromHtml (docx)", () => {
   it("делит документ на секции по заголовкам h1-h6", () => {
@@ -109,5 +109,71 @@ describe("sectionsFromRows (xlsx)", () => {
 
   it("возвращает пустой массив для пустой таблицы", () => {
     expect(sectionsFromRows("Лист", [])).toEqual([]);
+  });
+
+  it("распознаёт таблицу с колонкой нумерации перед вопросом", () => {
+    const rows = [
+      ["№", "Текст вопроса", "Ответ 1 (Верный)", "Ответ 2", "Ответ 3"],
+      ["1", "Какой адрес платформы Qbox?", "qbox.telecom.kz", "неверный", "тоже неверный"],
+    ];
+
+    const sections = sectionsFromRows("вопросы по Qbox", rows);
+
+    expect(sections).toEqual([
+      { heading: "Какой адрес платформы Qbox?", content: "qbox.telecom.kz" },
+    ]);
+  });
+
+  it("распознаёт таблицу, где колонка нумерации пустая", () => {
+    const rows = [
+      ["", "Текст вопроса", "Ответ 1 (Верный)", "Ответ 2"],
+      ["1", "Вопрос про ЦАП?", "Верный ответ", "Неверный"],
+    ];
+
+    expect(sectionsFromRows("ЦАП", rows)).toEqual([
+      { heading: "Вопрос про ЦАП?", content: "Верный ответ" },
+    ]);
+  });
+});
+
+describe("findQuizColumns", () => {
+  it("предпочитает колонку, помеченную как верный ответ", () => {
+    expect(findQuizColumns(["Текст вопроса", "Ответ 2", "Ответ 1 (Верный)"])).toEqual({
+      questionIndex: 0,
+      answerIndex: 2,
+    });
+  });
+
+  it("возвращает null, если это не таблица вопросов", () => {
+    expect(findQuizColumns(["Тариф", "Цена"])).toBeNull();
+    expect(findQuizColumns(["Текст вопроса"])).toBeNull();
+  });
+});
+
+describe("cellToString", () => {
+  it("берёт результат формулы вместо объекта", () => {
+    expect(cellToString({ formula: "A1+B1", result: 1500 })).toBe("1500");
+  });
+
+  it("склеивает текст с форматированием", () => {
+    expect(
+      cellToString({ richText: [{ text: "Bereket " }, { text: "new A" }] }),
+    ).toBe("Bereket new A");
+  });
+
+  it("берёт текст гиперссылки", () => {
+    expect(cellToString({ text: "Прейскурант", hyperlink: "https://example.com" })).toBe(
+      "Прейскурант",
+    );
+  });
+
+  it("не переносит ошибку ячейки в текст", () => {
+    expect(cellToString({ error: "#N/A" })).toBe("");
+  });
+
+  it("обрабатывает обычные значения", () => {
+    expect(cellToString("  текст  ")).toBe("текст");
+    expect(cellToString(42)).toBe("42");
+    expect(cellToString(null)).toBe("");
   });
 });

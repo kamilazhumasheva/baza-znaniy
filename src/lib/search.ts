@@ -20,6 +20,23 @@ export interface SearchResult {
 }
 
 /**
+ * Строит «мягкий» tsquery: любое из слов запроса, с поиском по началу слова.
+ * Нужен, потому что websearch_to_tsquery связывает слова через И — запрос
+ * «тарифный план bereket» не найдёт ничего, если нет материала сразу со всеми
+ * тремя словами. Слова очищаются до букв и цифр, поэтому спецсинтаксис
+ * tsquery в них попасть не может.
+ */
+export function buildLooseTsQuery(query: string): string | null {
+  const words = query
+    .toLowerCase()
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter((w) => w.length >= 2);
+
+  if (words.length === 0) return null;
+  return words.map((w) => `${w}:*`).join(" | ");
+}
+
+/**
  * Полнотекстовый поиск: websearch_to_tsquery (rus-конфигурация) + триграммное
  * сходство (pg_trgm) как страховка от опечаток и неточных формулировок.
  * Работает всегда, независимо от того, настроен ли семантический поиск.
@@ -31,6 +48,9 @@ async function textSearch(params: {
 }): Promise<SearchResult[]> {
   const { query, categoryId, limit = 20 } = params;
   if (!query.trim()) return [];
+
+  const loose = buildLooseTsQuery(query);
+  if (!loose) return [];
 
   const materialCategoryFilter = categoryId
     ? Prisma.sql`AND m."categoryId" = ${categoryId}`
@@ -49,9 +69,14 @@ async function textSearch(params: {
         m."categoryId" AS "categoryId",
         c.name AS "categoryName",
         c.slug AS "categorySlug",
+        -- Точное совпадение (все слова) весит втрое больше «любого из слов»
         ts_rank(
           to_tsvector('russian', coalesce(m.title, '') || ' ' || coalesce(m.description, '')),
           websearch_to_tsquery('russian', ${query})
+        ) * 3
+        + ts_rank(
+          to_tsvector('russian', coalesce(m.title, '') || ' ' || coalesce(m.description, '')),
+          to_tsquery('russian', ${loose})
         ) AS rank,
         similarity(m.title, ${query}) AS sim
       FROM "Material" m
@@ -60,8 +85,12 @@ async function textSearch(params: {
         ${materialCategoryFilter}
         AND (
           to_tsvector('russian', coalesce(m.title, '') || ' ' || coalesce(m.description, ''))
-            @@ websearch_to_tsquery('russian', ${query})
+            @@ to_tsquery('russian', ${loose})
           OR m.title % ${query}
+          -- Сравнение с отдельными словами заголовка: ловит опечатки и неточный
+          -- ввод («janua» → «Januya»), когда поиск по началу слова не срабатывает.
+          -- Полный перебор строк, но корпус внутренней базы небольшой.
+          OR word_similarity(${query}, m.title) > 0.4
         )
 
       UNION ALL
@@ -77,6 +106,10 @@ async function textSearch(params: {
         ts_rank(
           to_tsvector('russian', coalesce(f.question, '') || ' ' || coalesce(f.answer, '')),
           websearch_to_tsquery('russian', ${query})
+        ) * 3
+        + ts_rank(
+          to_tsvector('russian', coalesce(f.question, '') || ' ' || coalesce(f.answer, '')),
+          to_tsquery('russian', ${loose})
         ) AS rank,
         similarity(f.question, ${query}) AS sim
       FROM "Faq" f
@@ -85,8 +118,9 @@ async function textSearch(params: {
         ${faqCategoryFilter}
         AND (
           to_tsvector('russian', coalesce(f.question, '') || ' ' || coalesce(f.answer, ''))
-            @@ websearch_to_tsquery('russian', ${query})
+            @@ to_tsquery('russian', ${loose})
           OR f.question % ${query}
+          OR word_similarity(${query}, f.question) > 0.4
         )
     ) results
     ORDER BY (rank * 2 + sim) DESC
