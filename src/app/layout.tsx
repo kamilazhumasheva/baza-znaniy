@@ -17,8 +17,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "База знаний",
-  description: "Корпоративная база знаний для сотрудников фронт-офиса",
+  title: "Быстрый помощник",
+  description: "Быстрый помощник — база знаний для сотрудников фронт-офиса",
 };
 
 export default async function RootLayout({

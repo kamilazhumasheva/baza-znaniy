@@ -5,6 +5,7 @@ import { ThemeToggle } from "@/components/theme-toggle";
 import { HeaderAuthControls } from "@/components/header-auth-controls";
 import { NotificationsBell } from "@/components/notifications-bell";
 import { CorporateLogoBadge } from "@/components/corporate-logo-badge";
+import { GnomeLogo } from "@/components/gnome-logo";
 
 export async function SiteHeader() {
   const session = await auth();
@@ -16,10 +17,8 @@ export async function SiteHeader() {
     <header className="sticky top-0 z-40 border-b border-border bg-background/95 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-4 px-4">
         <Link href="/" className="flex items-center gap-2 font-semibold text-foreground">
-          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-background text-sm font-bold">
-            БЗ
-          </span>
-          <span className="hidden sm:inline">База знаний</span>
+          <GnomeLogo className="h-9 w-9 shrink-0" />
+          <span className="hidden sm:inline">Быстрый помощник</span>
         </Link>
 
         <nav className="hidden items-center gap-4 text-sm text-muted md:flex">

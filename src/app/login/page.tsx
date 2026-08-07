@@ -3,7 +3,7 @@ import { LoginForm } from "@/components/login-form";
 import { GuestLoginButton } from "@/components/guest-login-button";
 
 export const metadata = {
-  title: "Вход — База знаний",
+  title: "Вход — Быстрый помощник",
 };
 
 export default function LoginPage() {
@@ -12,7 +12,7 @@ export default function LoginPage() {
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-6 px-4 py-16">
       <div className="flex flex-col items-center gap-1 text-center">
-        <h1 className="text-xl font-semibold text-foreground">Корпоративная база знаний</h1>
+        <h1 className="text-xl font-semibold text-foreground">Быстрый помощник</h1>
         <p className="text-sm text-muted">Войдите, чтобы продолжить</p>
       </div>
       <Suspense>

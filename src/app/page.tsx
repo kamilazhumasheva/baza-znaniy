@@ -41,7 +41,7 @@ export default async function HomePage() {
       <section className="flex flex-col items-center gap-6 border-b border-border bg-surface px-4 py-14 text-center">
         <div>
           <h1 className="text-2xl font-semibold text-foreground sm:text-3xl">
-            {session?.user ? `Здравствуйте, ${session.user.name}` : "Корпоративная база знаний"}
+            {session?.user ? `Здравствуйте, ${session.user.name}` : "Быстрый помощник"}
           </h1>
           <p className="mt-2 text-muted">Найдите ответ на рабочий вопрос за несколько секунд</p>
         </div>

@@ -48,3 +48,58 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans), Arial, Helvetica, sans-serif;
 }
+
+/* Логотип-гномик: лёгкое покачивание и мерцание звёздочки на палочке */
+@keyframes gnome-bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-1.5px);
+  }
+}
+
+@keyframes gnome-wand-wave {
+  0%,
+  100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(-12deg);
+  }
+}
+
+@keyframes gnome-sparkle {
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.35) rotate(45deg);
+  }
+}
+
+.gnome-bob {
+  animation: gnome-bob 2.6s ease-in-out infinite;
+}
+
+.gnome-wand {
+  transform-origin: 27px 35px;
+  animation: gnome-wand-wave 2.6s ease-in-out infinite;
+}
+
+.gnome-sparkle {
+  transform-origin: 35px 22.6px;
+  animation: gnome-sparkle 1.6s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gnome-bob,
+  .gnome-wand,
+  .gnome-sparkle {
+    animation: none;
+  }
+}
