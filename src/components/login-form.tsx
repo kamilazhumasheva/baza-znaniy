@@ -40,11 +40,13 @@ export function LoginForm() {
     <form onSubmit={handleSubmit} className="flex w-full max-w-sm flex-col gap-4">
       <div className="flex flex-col gap-1">
         <label htmlFor="email" className="text-sm font-medium text-muted">
-          Email
+          Логин или email
         </label>
+        {/* type="text", а не "email": корпоративные учётные записи могут быть
+            обычными логинами (Kamila_admin), а не адресами почты. */}
         <input
           id="email"
-          type="email"
+          type="text"
           required
           autoComplete="username"
           value={email}
