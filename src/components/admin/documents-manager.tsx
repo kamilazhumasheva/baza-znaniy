@@ -30,13 +30,16 @@ export function DocumentsManager({
   const [title, setTitle] = useState("");
   const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
   const [file, setFile] = useState<File | null>(null);
+  const [sourceMode, setSourceMode] = useState<"file" | "drive">("file");
+  const [driveUrl, setDriveUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
 
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!file) return;
+    if (sourceMode === "file" && !file) return;
+    if (sourceMode === "drive" && !driveUrl.trim()) return;
     setError(null);
     setMessage(null);
     setUploading(true);
@@ -44,7 +47,11 @@ export function DocumentsManager({
       const form = new FormData();
       form.set("title", title);
       form.set("categoryId", categoryId);
-      form.set("file", file);
+      if (sourceMode === "file" && file) {
+        form.set("file", file);
+      } else {
+        form.set("sourceUrl", driveUrl.trim());
+      }
       const result = await uploadForm("/api/documents", form);
       const category = categories.find((c) => c.id === categoryId)!;
       setDocuments((prev) => [
@@ -56,6 +63,7 @@ export function DocumentsManager({
       );
       setTitle("");
       setFile(null);
+      setDriveUrl("");
       // Сбрасываем кэш роутера, иначе на страницах «Материалы» и «Вопросы (FAQ)»
       // может показаться сохранённая копия списка без новых черновиков.
       router.refresh();
@@ -103,6 +111,25 @@ export function DocumentsManager({
   return (
     <div className="flex flex-col gap-6">
       <form onSubmit={handleUpload} className="flex flex-col gap-3 rounded-lg border border-border bg-surface p-4">
+        <div className="flex gap-2">
+          {[
+            { value: "file" as const, label: "Загрузить файл" },
+            { value: "drive" as const, label: "Ссылка Google Диска" },
+          ].map((tab) => (
+            <button
+              key={tab.value}
+              type="button"
+              onClick={() => setSourceMode(tab.value)}
+              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                sourceMode === tab.value
+                  ? "bg-primary text-background"
+                  : "border border-border text-foreground hover:bg-surface-hover"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
         <div className="flex flex-col gap-1">
           <label className="text-xs text-muted">Название документа</label>
           <input
@@ -127,16 +154,34 @@ export function DocumentsManager({
               ))}
             </select>
           </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-xs text-muted">Файл (.docx, .pdf, .xlsx)</label>
-            <input
-              required
-              type="file"
-              accept=".docx,.pdf,.xlsx"
-              onChange={(e) => setFile(e.target.files?.[0] ?? null)}
-              className="text-sm text-foreground"
-            />
-          </div>
+          {sourceMode === "file" ? (
+            <div className="flex flex-col gap-1">
+              <label className="text-xs text-muted">Файл (.docx, .pdf, .xlsx)</label>
+              <input
+                required
+                type="file"
+                accept=".docx,.pdf,.xlsx"
+                onChange={(e) => setFile(e.target.files?.[0] ?? null)}
+                className="text-sm text-foreground"
+              />
+            </div>
+          ) : (
+            <div className="flex min-w-64 flex-1 flex-col gap-1">
+              <label className="text-xs text-muted">Ссылка на Google Диск</label>
+              <input
+                required
+                type="url"
+                value={driveUrl}
+                onChange={(e) => setDriveUrl(e.target.value)}
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                className="rounded-md border border-border bg-background px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+              <p className="text-xs text-muted">
+                Google Документ, Google Таблица или файл на Диске. Откройте доступ:
+                «Всем, у кого есть ссылка» → «Читатель».
+              </p>
+            </div>
+          )}
         </div>
         {error && <p className="text-sm text-danger">{error}</p>}
         {message && <p className="text-sm text-accent">{message}</p>}
