@@ -50,3 +50,17 @@ export const userUpdateSchema = z.object({
   role: z.enum(["ADMIN", "EMPLOYEE"]).optional(),
   isBlocked: z.boolean().optional(),
 });
+
+// Логин намеренно не обязан быть email: в компании удобнее заводить
+// учётные записи вида «Kamila_admin».
+export const userCreateSchema = z.object({
+  email: z
+    .string()
+    .trim()
+    .min(3, "Логин должен быть не короче 3 символов")
+    .max(120)
+    .regex(/^[^\s]+$/, "Логин не должен содержать пробелы"),
+  name: z.string().trim().min(1, "Имя обязательно").max(120),
+  password: z.string().min(8, "Пароль должен быть не короче 8 символов").max(200),
+  role: z.enum(["ADMIN", "EMPLOYEE"]),
+});
