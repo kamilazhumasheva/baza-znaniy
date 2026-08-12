@@ -96,10 +96,44 @@ body {
   animation: gnome-sparkle 1.6s ease-in-out infinite;
 }
 
+/* Мотивационный блок: появление фразы и мягкое «дыхание» подсветки */
+@keyframes motivation-enter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes motivation-glow {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+
+.motivation-enter {
+  animation: motivation-enter 0.6s ease-out;
+}
+
+.motivation-glow {
+  animation: motivation-glow 6s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .gnome-bob,
   .gnome-wand,
-  .gnome-sparkle {
+  .gnome-sparkle,
+  .motivation-enter,
+  .motivation-glow {
     animation: none;
   }
 }

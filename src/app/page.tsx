@@ -4,18 +4,14 @@ import { auth } from "@/lib/auth";
 import { SearchBar } from "@/components/search-bar";
 import { MaterialCard } from "@/components/material-card";
 import { FaqItem } from "@/components/faq-item";
+import { MotivationBlock } from "@/components/motivation-block";
+import { randomQuoteIndex } from "@/lib/motivation";
 
 export default async function HomePage() {
   const session = await auth();
 
-  const [categories, recentMaterials, pinnedMaterials, popularFaqViews] = await Promise.all([
+  const [categories, pinnedMaterials, popularFaqViews] = await Promise.all([
     prisma.category.findMany({ where: { parentId: null }, orderBy: { order: "asc" } }),
-    prisma.material.findMany({
-      where: { status: "PUBLISHED" },
-      include: { category: true },
-      orderBy: { publishedAt: "desc" },
-      take: 6,
-    }),
     prisma.material.findMany({
       where: { status: "PUBLISHED", pinned: true },
       include: { category: true },
@@ -79,25 +75,7 @@ export default async function HomePage() {
           </section>
         )}
 
-        <section className="flex flex-col gap-4">
-          <h2 className="text-lg font-semibold text-foreground">Последние обновления</h2>
-          {recentMaterials.length === 0 ? (
-            <p className="text-sm text-muted">Материалов пока нет.</p>
-          ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {recentMaterials.map((m) => (
-                <MaterialCard
-                  key={m.id}
-                  id={m.id}
-                  title={m.title}
-                  description={m.description}
-                  categoryName={m.category.name}
-                  publishedAt={m.publishedAt}
-                />
-              ))}
-            </div>
-          )}
-        </section>
+        <MotivationBlock startIndex={randomQuoteIndex()} />
 
         <section className="flex flex-col gap-4">
           <h2 className="text-lg font-semibold text-foreground">Популярные вопросы</h2>
