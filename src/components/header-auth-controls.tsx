@@ -10,13 +10,17 @@ export function HeaderAuthControls({
   userName: string | null;
   userRole: "ADMIN" | "EMPLOYEE" | null;
 }) {
+  // Сотрудникам вход не нужен — база открыта всем. Ссылка оставлена только
+  // для администратора и оформлена неброско, чтобы её не принимали
+  // за обязательный шаг перед поиском.
   if (!userName) {
     return (
       <Link
         href="/login"
-        className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-surface-hover"
+        className="whitespace-nowrap text-sm text-muted transition-colors hover:text-foreground"
       >
-        Войти
+        <span className="hidden sm:inline">Вход для администратора</span>
+        <span className="sm:hidden">Вход</span>
       </Link>
     );
   }
