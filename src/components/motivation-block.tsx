@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { MOTIVATION_QUOTES, THEME_LABELS } from "@/lib/motivation";
+import { MOTIVATION_QUOTES } from "@/lib/motivation";
 
 /**
  * Мотивационная фраза на главной. Стартовый индекс приходит с сервера —
@@ -45,11 +45,7 @@ export function MotivationBlock({ startIndex }: { startIndex: number }) {
           visible ? "motivation-enter opacity-100" : "translate-y-2 opacity-0"
         }`}
       >
-        <span className="rounded-full bg-accent/10 px-3 py-1 text-xs font-medium text-accent">
-          {THEME_LABELS[quote.theme]}
-        </span>
-
-        <p className="max-w-2xl text-lg font-medium leading-relaxed text-foreground sm:text-xl">
+        <p className="max-w-2xl text-xl font-medium leading-relaxed text-foreground sm:text-2xl">
           {quote.text}
         </p>
 

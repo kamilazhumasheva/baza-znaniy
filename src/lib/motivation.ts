@@ -3,14 +3,9 @@ export type MotivationTheme = "study" | "mood" | "burnout";
 export interface MotivationQuote {
   text: string;
   author?: string;
+  /** На сайте не показывается — нужна только чтобы держать баланс тем при пополнении списка. */
   theme: MotivationTheme;
 }
-
-export const THEME_LABELS: Record<MotivationTheme, string> = {
-  study: "для учёбы",
-  mood: "для настроения",
-  burnout: "против выгорания",
-};
 
 /**
  * Подборка намеренно «рабочая», а не лозунговая: каждая фраза даёт конкретную
