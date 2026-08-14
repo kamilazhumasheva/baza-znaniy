@@ -46,7 +46,7 @@ export function cellToString(value: unknown): string {
 // часто идёт колонка нумерации («№» или вовсе пустая).
 export function findQuizColumns(
   header: string[],
-): { questionIndex: number; answerIndex: number } | null {
+): { questionIndex: number; answerIndex: number; wrongIndexes: number[] } | null {
   // Array.from, а не map: map пропускает «дырки» разреженного массива и оставляет
   // их в результате, из-за чего findIndex ниже получил бы undefined.
   const lower = Array.from(header, (h) => (h ?? "").toLowerCase());
@@ -62,7 +62,14 @@ export function findQuizColumns(
   const answerIndex = correctIndex !== -1 ? correctIndex : anyAnswerIndex;
 
   if (answerIndex === -1) return null;
-  return { questionIndex, answerIndex };
+
+  // Остальные колонки «Ответ N» — неверные варианты. Нужны для самопроверки.
+  const wrongIndexes = lower
+    .map((h, i) => ({ h, i }))
+    .filter(({ h, i }) => i > questionIndex && i !== answerIndex && h.includes("ответ"))
+    .map(({ i }) => i);
+
+  return { questionIndex, answerIndex, wrongIndexes };
 }
 
 // Вопросы и ответы часто продублированы на русском и казахском через "/"
@@ -81,7 +88,13 @@ export function sectionsFromRows(sheetName: string, rows: string[][]): DocumentS
     for (const row of rows.slice(1)) {
       const question = stripBilingual(row[quiz.questionIndex] ?? "");
       const answer = stripBilingual(row[quiz.answerIndex] ?? "");
-      if (question && answer) sections.push({ heading: question, content: answer });
+      if (!question || !answer) continue;
+
+      const wrongOptions = quiz.wrongIndexes
+        .map((i) => stripBilingual(row[i] ?? ""))
+        .filter((v) => v && v !== answer);
+
+      sections.push({ heading: question, content: answer, wrongOptions });
     }
     return sections;
   }

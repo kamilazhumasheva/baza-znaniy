@@ -25,6 +25,9 @@ export async function SiteHeader() {
           <Link href="/" className="transition-colors hover:text-foreground">
             Главная
           </Link>
+          <Link href="/quiz" className="transition-colors hover:text-foreground">
+            Самопроверка
+          </Link>
           {session?.user && (
             <>
               <Link href="/favorites" className="transition-colors hover:text-foreground">

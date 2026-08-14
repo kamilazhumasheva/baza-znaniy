@@ -98,6 +98,8 @@ export async function generateDraftsFromDocument(params: {
             sourceDocumentId: documentId,
             materialId: material.id,
             status: "DRAFT",
+            // Есть только у секций из таблиц-тестов — для режима самопроверки.
+            wrongOptions: section.wrongOptions ?? [],
           },
         });
         faqsCount++;

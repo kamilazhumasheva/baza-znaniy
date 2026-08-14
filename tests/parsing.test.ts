@@ -64,7 +64,7 @@ describe("sectionsFromText (pdf)", () => {
 });
 
 describe("sectionsFromRows (xlsx)", () => {
-  it("распознаёт таблицу-квиз и оставляет только вопрос и верный ответ, без казахского варианта", () => {
+  it("в текст материала кладёт только верный ответ, неверные варианты сохраняет отдельно", () => {
     const rows = [
       ["Текст вопроса", "Ответ 1 (Верный)", "Ответ 2", "Ответ 3"],
       [
@@ -81,6 +81,8 @@ describe("sectionsFromRows (xlsx)", () => {
     expect(sections[0]).toEqual({
       heading: "Как называется пакет Казахтелеком ТВ+ в пакете 2026 Keremet TV?",
       content: "ТВ плюс Optima",
+      // Казахский вариант отброшен и здесь тоже — в тренажёре он не нужен.
+      wrongOptions: ["ТВ плюс Full", "ТВ плюс Mobile"],
     });
   });
 
@@ -120,7 +122,11 @@ describe("sectionsFromRows (xlsx)", () => {
     const sections = sectionsFromRows("вопросы по Qbox", rows);
 
     expect(sections).toEqual([
-      { heading: "Какой адрес платформы Qbox?", content: "qbox.telecom.kz" },
+      {
+        heading: "Какой адрес платформы Qbox?",
+        content: "qbox.telecom.kz",
+        wrongOptions: ["неверный", "тоже неверный"],
+      },
     ]);
   });
 
@@ -131,7 +137,7 @@ describe("sectionsFromRows (xlsx)", () => {
     ];
 
     expect(sectionsFromRows("ЦАП", rows)).toEqual([
-      { heading: "Вопрос про ЦАП?", content: "Верный ответ" },
+      { heading: "Вопрос про ЦАП?", content: "Верный ответ", wrongOptions: ["Неверный"] },
     ]);
   });
 });
@@ -141,13 +147,18 @@ describe("findQuizColumns", () => {
     const sparseHeader = ["№", , "Текст вопроса", "Ответ 1 (Верный)"] as string[];
 
     expect(() => findQuizColumns(sparseHeader)).not.toThrow();
-    expect(findQuizColumns(sparseHeader)).toEqual({ questionIndex: 2, answerIndex: 3 });
+    expect(findQuizColumns(sparseHeader)).toEqual({
+      questionIndex: 2,
+      answerIndex: 3,
+      wrongIndexes: [],
+    });
   });
 
-  it("предпочитает колонку, помеченную как верный ответ", () => {
-    expect(findQuizColumns(["Текст вопроса", "Ответ 2", "Ответ 1 (Верный)"])).toEqual({
+  it("предпочитает колонку, помеченную как верный ответ, остальные считает неверными", () => {
+    expect(findQuizColumns(["Текст вопроса", "Ответ 2", "Ответ 1 (Верный)", "Ответ 3"])).toEqual({
       questionIndex: 0,
       answerIndex: 2,
+      wrongIndexes: [1, 3],
     });
   });
 

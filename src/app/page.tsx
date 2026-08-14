@@ -42,6 +42,12 @@ export default async function HomePage() {
           <p className="mt-2 text-muted">Найдите ответ на рабочий вопрос за несколько секунд</p>
         </div>
         <SearchBar autoFocus />
+        <Link
+          href="/quiz"
+          className="rounded-md border border-accent px-4 py-2 text-sm font-medium text-accent transition-colors hover:bg-accent/10"
+        >
+          Проверить себя перед тестированием
+        </Link>
         <div className="flex flex-wrap justify-center gap-2">
           {categories.map((c) => (
             <Link

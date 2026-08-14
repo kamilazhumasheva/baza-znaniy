@@ -146,6 +146,9 @@ model Faq {
   materialId       String?
   material         Material?     @relation(fields: [materialId], references: [id])
   status           ContentStatus @default(DRAFT)
+  /// Неверные варианты из исходной таблицы-теста. Нужны для режима
+  /// самопроверки; пусто, если материал пришёл не из теста.
+  wrongOptions     String[]      @default([])
   updatedAt        DateTime      @updatedAt
   createdAt        DateTime      @default(now())
 
