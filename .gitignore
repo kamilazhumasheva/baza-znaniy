@@ -44,3 +44,7 @@ next-env.d.ts
 # uploaded documents
 /storage/uploads/*
 !/storage/uploads/.gitkeep
+
+# выгрузка базы в HTML — содержит внутренние документы компании,
+# в репозиторий (тем более публичный) попадать не должна
+/export/
