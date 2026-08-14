@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { auth } from "@/lib/auth";
 import { FaqItem } from "@/components/faq-item";
 import { FavoriteButton } from "@/components/favorite-button";
+import { FeedbackButtons } from "@/components/feedback-buttons";
 
 export default async function MaterialPage({
   params,
@@ -72,6 +73,10 @@ export default async function MaterialPage({
           Скачать документ
         </a>
       )}
+
+      <div className="border-t border-border pt-5">
+        <FeedbackButtons materialId={material.id} />
+      </div>
 
       {material.faqs.length > 0 && (
         <section className="flex flex-col gap-4">

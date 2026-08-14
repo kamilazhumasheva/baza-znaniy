@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { href: "/admin/materials", label: "Материалы" },
   { href: "/admin/faq", label: "Вопросы (FAQ)" },
   { href: "/admin/categories", label: "Категории" },
+  { href: "/admin/feedback", label: "Отзывы сотрудников" },
   { href: "/admin/users", label: "Пользователи" },
   { href: "/admin/stats", label: "Статистика" },
   { href: "/admin/changelog", label: "Журнал изменений" },

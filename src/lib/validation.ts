@@ -51,6 +51,17 @@ export const userUpdateSchema = z.object({
   isBlocked: z.boolean().optional(),
 });
 
+export const feedbackSchema = z
+  .object({
+    kind: z.enum(["HELPFUL", "NOT_HELPFUL", "OUTDATED"]),
+    comment: z.string().trim().max(1000).optional(),
+    materialId: z.string().cuid().optional(),
+    faqId: z.string().cuid().optional(),
+  })
+  .refine((v) => Boolean(v.materialId) !== Boolean(v.faqId), {
+    message: "Укажите либо materialId, либо faqId",
+  });
+
 // Логин намеренно не обязан быть email: в компании удобнее заводить
 // учётные записи вида «Kamila_admin».
 export const userCreateSchema = z.object({

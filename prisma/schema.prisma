@@ -40,6 +40,12 @@ enum ChangeAction {
   UPLOAD_VERSION
 }
 
+enum FeedbackKind {
+  HELPFUL
+  NOT_HELPFUL
+  OUTDATED
+}
+
 // ---------- Core ----------
 
 model User {
@@ -56,6 +62,7 @@ model User {
   favorites     Favorite[]
   viewHistory   ViewHistory[]
   searchLogs    SearchLog[]
+  feedback      Feedback[]
   notifications Notification[]
   changeLogs    ChangeLog[]
 }
@@ -119,9 +126,13 @@ model Material {
   faqs        Faq[]
   favorites   Favorite[]
   viewHistory ViewHistory[]
+  feedback    Feedback[]
 
   @@index([categoryId, status])
   @@index([pinned])
+  // Триграммный индекс для поиска с опечатками (создаётся search-indexes.sql).
+  // Описан здесь, иначе Prisma считает его «расхождением» и предлагает сброс базы.
+  @@index([title(ops: raw("gin_trgm_ops"))], map: "material_title_trgm_idx", type: Gin)
 }
 
 model Faq {
@@ -140,8 +151,10 @@ model Faq {
 
   favorites   Favorite[]
   viewHistory ViewHistory[]
+  feedback    Feedback[]
 
   @@index([categoryId, status])
+  @@index([question(ops: raw("gin_trgm_ops"))], map: "faq_question_trgm_idx", type: Gin)
 }
 
 model Favorite {
@@ -195,6 +208,28 @@ model Notification {
   createdAt DateTime @default(now())
 
   @@index([userId, isRead])
+}
+
+/// Оценка материала сотрудником. userId необязателен: чтение открыто без входа,
+/// а обратная связь нужна именно от рядовых сотрудников — требовать логин
+/// значило бы не получить её вовсе.
+model Feedback {
+  id         String       @id @default(cuid())
+  kind       FeedbackKind
+  comment    String?
+  materialId String?
+  material   Material?    @relation(fields: [materialId], references: [id], onDelete: Cascade)
+  faqId      String?
+  faq        Faq?         @relation(fields: [faqId], references: [id], onDelete: Cascade)
+  userId     String?
+  user       User?        @relation(fields: [userId], references: [id], onDelete: SetNull)
+  /// Админ отмечает разобранные жалобы, чтобы список не рос бесконечно.
+  resolved   Boolean      @default(false)
+  createdAt  DateTime     @default(now())
+
+  @@index([resolved, createdAt])
+  @@index([materialId])
+  @@index([faqId])
 }
 
 model ChangeLog {
